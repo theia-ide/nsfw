@@ -10,7 +10,7 @@ declare module '@theia/nsfw' {
     * @param {options} options - options
     */
     var func: NsfwFunction;
-    export default func;
+    export = func;
 
     export interface NSFW {
         /** Returns a Promise that resolves when the NSFW object has started watching the path. */
