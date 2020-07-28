@@ -23,6 +23,8 @@ declare module '@theia/nsfw' {
             debounceMS?: number;
             /** callback to fire in the case of errors */
             errorCallback: (err: any) => void;
+            /** glob-like patterns to ignore paths while watching */
+            ignoreGlobs: string[];
         }
 
         /** mapping object representing all the ActionType enum values */
