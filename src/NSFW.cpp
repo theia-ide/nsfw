@@ -1,4 +1,5 @@
 #include "../includes/NSFW.h"
+#include <cstdio>
 
 Napi::FunctionReference NSFW::constructor;
 std::size_t NSFW::instanceCount = 0;
@@ -9,6 +10,7 @@ NSFW::NSFW(const Napi::CallbackInfo &info):
   mDebounceMS(0),
   mInterface(nullptr),
   mQueue(std::make_shared<EventQueue>()),
+  mPathFilter(std::make_shared<PathFilter>()),
   mPath(""),
   mRunning(false)
 {
@@ -70,6 +72,22 @@ NSFW::NSFW(const Napi::CallbackInfo &info):
       0,
       1
     );
+
+    Napi::Value maybeIgnorePathRegexArray = options["ignorePathRegexArray"];
+    if (options.Has("ignorePathRegexArray") && !maybeIgnorePathRegexArray.IsUndefined()) {
+      if (!maybeIgnorePathRegexArray.IsArray()) {
+        throw Napi::TypeError::New(env, "options.ignorePathRegexArray must be a string array.");
+      }
+      Napi::Array array(maybeIgnorePathRegexArray.As<Napi::Array>());
+      uint32_t length(array.Length());
+      for (uint32_t i(0); i < length; ++i) {
+        Napi::Value item(array.Get(i));
+        if (!item.IsString()) {
+          throw Napi::TypeError::New(env, "options.ignorePathRegexArray must be a string array.");
+        }
+        mPathFilter->addIgnoreRegex(std::regex(item.ToString().Utf8Value(), std::regex::ECMAScript | std::regex::icase));
+      }
+    }
   }
 }
 
@@ -105,7 +123,7 @@ void NSFW::StartWorker::Execute() {
   }
 
   mNSFW->mQueue->clear();
-  mNSFW->mInterface.reset(new NativeInterface(mNSFW->mPath, mNSFW->mQueue));
+  mNSFW->mInterface.reset(new NativeInterface(mNSFW->mPath, mNSFW->mQueue, mNSFW->mPathFilter));
 
   if (mNSFW->mInterface->isWatching()) {
     mStatus = STARTED;
@@ -210,7 +228,7 @@ void NSFW::pollForEvents() {
       }
 
       if (mQueue->count() != 0) {
-        auto events = mQueue->dequeueAll();
+        auto events = mQueue->dequeueAll(mPathFilter);
         if (events != nullptr) {
           sleepDuration = mDebounceMS;
           auto callback = [](Napi::Env env, Napi::Function jsCallback, std::vector<std::unique_ptr<Event>> *eventsRaw) {
