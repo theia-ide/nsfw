@@ -534,6 +534,59 @@ describe('Node Sentinel File Watcher', function() {
         watch = null;
       }
     });
+
+    if (process.platform === 'linux') {
+      it('can cut part of the watch tree (linux)', async function () {
+        const path4 = path.resolve(workDir, 'test4');
+        const path3 = path.resolve(workDir, 'test3');
+        let deletionCountErrors = 0;
+        let deletionCount = 0;
+
+        function findEvent(element) {
+          if (element.action === nsfw.actions.DELETED)
+          {
+            if (element.directory === path.resolve(path4))
+            {
+              deletionCountErrors++;
+            }
+            else if (element.directory === workDir && element.file === 'test4')
+            {
+              deletionCountErrors++;
+            }
+            else if (element.directory === path.resolve(path3)
+                && (element.file === 'testing3.file' || element.file === 'folder3'))
+            {
+              deletionCount++;
+            }
+            else if (element.directory === workDir && element.file === 'test3')
+            {
+              deletionCount++;
+            }
+          }
+        }
+
+        let watch = await nsfw(
+          workDir,
+          events => events.forEach(findEvent),
+          { debounceMS: DEBOUNCE, ignorePathRegexArray: [ '/test4' ] }
+        );
+
+        try {
+          await watch.start();
+          await sleep(TIMEOUT_PER_STEP);
+          await fse.remove(path4);
+          await sleep(TIMEOUT_PER_STEP);
+          await fse.remove(path3);
+          await sleep(TIMEOUT_PER_STEP);
+
+          assert.ok(deletionCountErrors === 0);
+          assert.ok(deletionCount > 2);
+        } finally {
+          await watch.stop();
+          watch = null;
+        }
+      });
+    }
   });
 
   describe('Errors', function() {

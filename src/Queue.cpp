@@ -1,5 +1,7 @@
 #include "../includes/Queue.h"
+#include <cstdio>
 #include <iostream>
+#include <memory>
 
 #pragma unmanaged
 
@@ -36,6 +38,30 @@ std::unique_ptr<std::vector<std::unique_ptr<Event>>> EventQueue::dequeueAll() {
   std::unique_ptr<std::vector<std::unique_ptr<Event>>> events(new std::vector<std::unique_ptr<Event>>);
   for (size_t i = 0; i < queueSize; ++i) {
     auto &front = queue.front();
+    events->emplace_back(std::move(front));
+    queue.pop_front();
+  }
+
+  return events;
+}
+
+std::unique_ptr<std::vector<std::unique_ptr<Event>>> EventQueue::dequeueAll(const std::shared_ptr<PathFilter> &pathFilter) {
+  std::lock_guard<std::mutex> lock(mutex);
+  if (queue.empty()) {
+    return nullptr;
+  }
+
+  const auto queueSize = queue.size();
+  std::unique_ptr<std::vector<std::unique_ptr<Event>>> events(new std::vector<std::unique_ptr<Event>>);
+  for (size_t i = 0; i < queueSize; ++i) {
+    auto &front = queue.front();
+    if (
+      pathFilter->ignorePath(front->fromDirectory + "/" + front->fromFile) ||
+      (front->type == EventType::RENAMED && pathFilter->ignorePath(front->toDirectory + "/" + front->toFile))
+    ) {
+      queue.pop_front();
+      continue;
+    }
     events->emplace_back(std::move(front));
     queue.pop_front();
   }

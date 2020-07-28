@@ -10,6 +10,7 @@ const nsfw = require('@theia/nsfw');
  - **options**
    - **debounceMS**: time in milliseconds to debounce the event callback
    - **errorCallback**: callback to fire in the case of errors
+   - **ignorePathRegexArray**: string array with regex patterns to ignore paths
 
 
   Returns a Promise that resolves to the created NSFW Object.
