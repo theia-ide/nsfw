@@ -1,7 +1,7 @@
 # API
 
 ```javascript
-const nsfw = require('nsfw');
+const nsfw = require('@theia/nsfw');
 ```
 
 ## [*fn*] nsfw(watchPath: string, eventCallback: fn, options: object) : Promise

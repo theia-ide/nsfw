@@ -30,7 +30,7 @@ So why NSFW? Because it has a consistent and minimal footprint in the Javascript
 ## Usage
 
 ```js
-var nsfw = require('nsfw');
+var nsfw = require('@theia/nsfw');
 
 var watcher1;
 return nsfw(
