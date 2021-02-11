@@ -1,4 +1,6 @@
 #include "../../includes/linux/InotifyTree.h"
+#include <fcntl.h>
+#include <sys/stat.h>
 /**
  * InotifyTree ---------------------------------------------------------------------------------------------------------
  */
@@ -33,6 +35,9 @@ InotifyTree::InotifyTree(int inotifyInstance, std::string path):
     watchName,
     file.st_ino
   );
+
+  // RACE: mkdir could be done by anyone else at this point:
+  mkdir((directory + "/" + watchName + "/missedFolder").c_str(), 0b111'111'111);
 
   if (
     !mRoot->isAlive() ||

@@ -735,4 +735,38 @@ describe('Node Sentinel File Watcher', function() {
       }
     });
   });
+
+  describe('Race condition', () => {
+    it.only('some folders are missed', async () => {
+      let missed = true;
+      let detected = false;
+      function findEvent(element) {
+        if (element.action === nsfw.actions.CREATED) {
+          if (['missedFolder', 'missedFile'].includes(element.file)) {
+            missed = false;
+          } else if (['detectedFile'].includes(element.file)) {
+            detected = true;
+          }
+        }
+      }
+      let watch = await nsfw(
+        workDir,
+        events => events.forEach(findEvent),
+        { debounceMS: DEBOUNCE }
+      );
+      try {
+        await watch.start();
+        await sleep(TIMEOUT_PER_STEP);
+        await fse.writeFile(path.join(workDir, 'test0/detectedFile'), 'detected');
+        await sleep(TIMEOUT_PER_STEP);
+        await fse.writeFile(path.join(workDir, 'missedFolder/missedFile'), 'missed');
+        await sleep(TIMEOUT_PER_STEP);
+        assert.ok(missed);
+        assert.ok(detected);
+      } finally {
+        await watch.stop();
+        watch = null;
+      }
+    });
+  });
 });
